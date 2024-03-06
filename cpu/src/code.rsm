@@ -1,4 +1,4 @@
-NOOP
+; NOOP
 MOV eax 1
 MOV ebx eax 
 MOV eax 1234 
@@ -9,3 +9,8 @@ PUSH edx
 PUSH 21
 PUSH eax
 POP ecx
+MOV ebx 1
+MOV ecx 2
+MOV edx 1
+MOV eax 4
+INT

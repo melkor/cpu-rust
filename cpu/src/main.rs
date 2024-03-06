@@ -12,6 +12,7 @@ static OP_MOV:  i8 = 0b00000011;
 static OP_ADD:  i8 = 0b00000100;
 static OP_POP:  i8 = 0b00000101;
 static OP_PUSH: i8 = 0b00000110;
+static OP_INT: i8 = 0b00000111;
 
 static TYPE_SIZE: usize = 4;
 static TYPE_MASK: i8 = 0b0011;
@@ -102,11 +103,12 @@ fn main() {
         ("ADD", OP_ADD),
         ("PUSH", OP_PUSH),
         ("POP", OP_POP),
+        ("INT", OP_INT),
     ]);
 
     let mut registers: [i32; 16] = [0; 16];
     let mut stack: [i32; 128] = [0; 128];
-    let mut SP = 0;
+    let mut sp = 0;
 
     let code_reader = match load_code("code.rsm") {
         Ok(content) => content,
@@ -118,6 +120,9 @@ fn main() {
 
     let mut reg_inst: i64;
     for line in code_reader.flatten() {
+        if line.starts_with(";") {
+            continue;
+        }
         match decode(&line, &op_list) {
             Err(err) => {
                 eprintln!("decoding error: {}", err);
@@ -158,17 +163,22 @@ fn main() {
             }
         } else if op_code == OP_PUSH {
             if reg_type == TYPE_VAL {
-                println!("push value '{:#b}' into stack at add'{:#b}'", reg_val, SP);
-                stack[SP] = reg_val as i32; 
+                println!("push value '{:#b}' into stack at add'{:#b}'", reg_val, sp);
+                stack[sp] = reg_val as i32; 
             } else if reg_type == TYPE_REG {
-                println!("push register '{:#b}' into stack at add'{:#b}'", reg_val, SP);
-                stack[SP] = registers[reg_val as usize]; 
+                println!("push register '{:#b}' into stack at add'{:#b}'", reg_val, sp);
+                stack[sp] = registers[reg_val as usize]; 
             }
-            SP += 1;
+            sp += 1;
         } else if op_code == OP_POP {
-            SP -= 1;
-            println!("pop from stack '{:#b}' into register '{:#b}'", SP, reg_val);
-            registers[reg_val as usize] = stack[SP];
+            sp -= 1;
+            println!("pop from stack '{:#b}' into register '{:#b}'", sp, reg_val);
+            registers[reg_val as usize] = stack[sp];
+        } else if op_code == OP_INT {
+            if registers[REG_EAX_ADDR as usize] == 4 {
+                println!("interupt display");
+                println!("{}", stack[registers[REG_ECX_ADDR as usize] as usize]);
+            }
         }
         println!("next ......");
     }
@@ -179,7 +189,7 @@ fn main() {
     }
 
     println!("\n\nDump stack:");
-    println!("Stack pointer (SP): {:#010b}", SP);
+    println!("Stack pointer (SP): {:#010b}", sp);
     for (index, item) in stack.iter().enumerate() {
         println!("{:#010b} => {:#034b}", index, item);
     }

@@ -1,1 +1,4 @@
+NOOP
+MOV eax 123465
+ADD eax 1
 HALT

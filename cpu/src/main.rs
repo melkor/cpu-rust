@@ -8,7 +8,6 @@ static OP_NOOP: i8 = 0b00000001;
 static OP_HALT: i8 = 0b00000010;
 static OP_MOV:i8 = 0b00000011;
 static OP_ADD:i8 = 0b00000100;
-//
 
 static REG_MASK: i64 = 0b11111111 << 8;
 static REG_EAX_ADDR: i64 = 0b1;
@@ -16,7 +15,10 @@ static REG_ECX_ADDR: i64 = 0b10;
 static REG_EDX_ADDR: i64 = 0b11;
 static REG_EBX_ADDR: i64 = 0b100;
 
-//static VAL_MASK: i64 = 0b11111111 << 16;
+static VAL_TYPE_MASK: i8 = 0b00000011;
+static VAL_TYPE_VAL: i8 = 0b1;
+static VAL_TYPE_REG: i8 = 0b10;
+//static VAL_TYPE_ADDR: i8 = 0b11;
 
 fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
     let fh = File::open(file_name)?;
@@ -44,8 +46,27 @@ fn decode(line: &str, _registers: &mut [i32; 16], op_list: &HashMap<&str, i8>) -
                 inst = inst | i64::from(REG_EBX_ADDR) << 8;
             }
         } else {
-            let val = token.parse::<i32>().unwrap();
-            inst = inst | i64::from(val) << 16;
+            if token == "eax" {
+                inst = inst | i64::from(VAL_TYPE_REG) << 16;
+                inst = inst | i64::from(REG_EAX_ADDR) << 20;
+            } else if token == "ecx" {
+                inst = inst | i64::from(VAL_TYPE_REG) << 16;
+                inst = inst | i64::from(REG_ECX_ADDR) << 20;
+            } else if token == "edx" {
+                inst = inst | i64::from(VAL_TYPE_REG) << 16;
+                inst = inst | i64::from(REG_EDX_ADDR) << 20;
+            } else if token == "ebx" {
+                inst = inst | i64::from(VAL_TYPE_REG) << 16;
+                inst = inst | i64::from(REG_EBX_ADDR) << 20;
+            } else {
+                match token.parse::<i32>() {
+                    Ok(val) => { 
+                        inst = inst | i64::from(VAL_TYPE_VAL) << 16;
+                        inst = inst | i64::from(val) << 20;
+                    },
+                    Err(_) => println!("TODO todo"),
+                }
+            }
         }
     }
     Ok(inst)
@@ -87,20 +108,29 @@ fn main() {
             println!("no op");
         } else if op_code == OP_HALT {
             println!("halt!!");
-            process::exit(0);
+            break;
         } else if op_code == OP_MOV {
             let reg_addr = ((reg_inst & REG_MASK) >> 8) as usize;
-            let val = (reg_inst >> 16) as i32;
-            println!("mov {:#b} into reg at addr {:#b}", val, reg_addr);
-            registers[reg_addr] = val;
+            let val_type = (reg_inst >> 16) as i8 & VAL_TYPE_MASK;
+            let val = (reg_inst >> 20) as i32;
+            if val_type == VAL_TYPE_VAL {
+                println!("mov value '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
+                registers[reg_addr] = val;
+            } else if val_type == VAL_TYPE_REG {
+                println!("mov from reg at addr '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
+                registers[reg_addr] = registers[val as usize];
+            }
         } else if op_code == OP_ADD {
             let reg_addr = ((reg_inst & REG_MASK) >> 8) as usize;
-            let val = (reg_inst >> 16) as i32;
+            let val = (reg_inst >> 20) as i32;
             println!("add {:#b} into reg at addr {:#b}", val, reg_addr);
             registers[reg_addr] = registers[reg_addr] + val;
         }
         println!("next ......");
     }
 
-    println!("Hello, world!");
+    println!("Dump registers:");
+    for (index, item) in registers.iter().enumerate() {
+        println!("{:#06b} => {:#034b}", index, item);
+    }
 }

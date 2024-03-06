@@ -1,4 +1,6 @@
 NOOP
 MOV eax 123465
+MOV ebx eax
 ADD eax 1
 HALT
+NOOP

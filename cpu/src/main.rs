@@ -35,6 +35,9 @@ fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
 fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
     let mut inst: i64 = 0;
     for token in line.split_whitespace() {
+        if token.starts_with(";") {
+            break;
+        }
         if inst & OP_MASK == 0 {
             match op_list.get(token) {
                 Some(op) => inst = inst | i64::from(op.clone()),
@@ -118,9 +121,6 @@ fn main() {
 
     let mut reg_inst: i64;
     for line in code_reader.flatten() {
-        if line.starts_with(";") {
-            continue;
-        }
         match decode(&line, &op_list) {
             Err(err) => {
                 eprintln!("decoding error: {}", err);

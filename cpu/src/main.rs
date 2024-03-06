@@ -105,7 +105,8 @@ fn main() {
     ]);
 
     let mut registers: [i32; 16] = [0; 16];
-    let mut _stack: [i32; 128] = [0; 128];
+    let mut stack: [i32; 128] = [0; 128];
+    let mut SP = 0;
 
     let code_reader = match load_code("code.rsm") {
         Ok(content) => content,
@@ -127,18 +128,10 @@ fn main() {
         println!("inst: {:#064b}", reg_inst);
 
         let op_code = (reg_inst & OP_MASK) as i8;
-        println!("op: {:#010b}", op_code);
-
         let reg_type = (reg_inst >> OP_SIZE) as i8 & TYPE_MASK;
-        println!("reg_type: {:#06b}", reg_type);
-        
-        let reg_addr = (reg_inst >> (TYPE_SIZE + OP_SIZE) & i64::from(REG_MASK)) as usize;
-        println!("reg_addr: {:#010b}", reg_addr);
-
+        let reg_val = reg_inst >> (TYPE_SIZE + OP_SIZE) & i64::from(REG_MASK);
         let val_type = (reg_inst >> (REG_SIZE + TYPE_SIZE + OP_SIZE)) as i8 & TYPE_MASK;
-        println!("val_type: {:#010b}", val_type);
         let val = (reg_inst >> (TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE)) as i32;
-        println!("val: {:#b}", val);
 
         if op_code == OP_NOOP {
             println!("no op");
@@ -146,6 +139,7 @@ fn main() {
             println!("halt!!");
             break;
         } else if op_code == OP_MOV {
+            let reg_addr = reg_val as usize;
             if val_type == TYPE_VAL {
                 println!("mov value '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
                 registers[reg_addr] = val;
@@ -154,6 +148,7 @@ fn main() {
                 registers[reg_addr] = registers[val as usize];
             }
         } else if op_code == OP_ADD {
+            let reg_addr = reg_val as usize;
             if val_type == TYPE_VAL {
                 println!("add value '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
                 registers[reg_addr] += val;
@@ -161,12 +156,31 @@ fn main() {
                 println!("add from reg at addr '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
                 registers[reg_addr] += registers[val as usize];
             }
+        } else if op_code == OP_PUSH {
+            if reg_type == TYPE_VAL {
+                println!("push value '{:#b}' into stack at add'{:#b}'", reg_val, SP);
+                stack[SP] = reg_val as i32; 
+            } else if reg_type == TYPE_REG {
+                println!("push register '{:#b}' into stack at add'{:#b}'", reg_val, SP);
+                stack[SP] = registers[reg_val as usize]; 
+            }
+            SP += 1;
+        } else if op_code == OP_POP {
+            SP -= 1;
+            println!("pop from stack '{:#b}' into register '{:#b}'", SP, reg_val);
+            registers[reg_val as usize] = stack[SP];
         }
         println!("next ......");
     }
 
-    println!("Dump registers:");
+    println!("\n\nDump registers:");
     for (index, item) in registers.iter().enumerate() {
         println!("{:#06b} => {:#034b}", index, item);
+    }
+
+    println!("\n\nDump stack:");
+    println!("Stack pointer (SP): {:#010b}", SP);
+    for (index, item) in stack.iter().enumerate() {
+        println!("{:#010b} => {:#034b}", index, item);
     }
 }

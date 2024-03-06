@@ -5,3 +5,7 @@ MOV eax 1234
 ADD eax 1 
 ADD edx eax 
 ADD edx ebx 
+PUSH edx
+PUSH 21
+PUSH eax
+POP ecx

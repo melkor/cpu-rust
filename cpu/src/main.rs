@@ -7,8 +7,8 @@ use std::process;
 static OP_MASK:i64 = 0b11111111;
 static OP_NOOP:i8 = 0b00000000;
 static OP_HALT:i8 = 0b00000001;
-static OP_MOV:i8 = 0b00000010;
-static OP_ADD:i8 = 0b00000011;
+// static OP_MOV:i8 = 0b00000010;
+// static OP_ADD:i8 = 0b00000011;
 
 
 fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
@@ -48,7 +48,7 @@ fn main() {
         }
     };
 
-    let mut reg_inst: i64 = 0;
+    let mut reg_inst: i64;
     for line in code_reader.flatten() {
         match decode(&line, &_op_list) {
             Err(err) => {

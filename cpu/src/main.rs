@@ -4,24 +4,24 @@ use std::io::{self, BufRead};
 use std::process;
 
 
-static OP_SIZE: usize = 8;
-static OP_MASK: i64 = 0b11111111;
-static OP_NOOP: i8 = 0b00000001;
-static OP_HALT: i8 = 0b00000010;
-static OP_MOV:  i8 = 0b00000011;
-static OP_ADD:  i8 = 0b00000100;
-static OP_POP:  i8 = 0b00000101;
-static OP_PUSH: i8 = 0b00000110;
-static OP_INT: i8 = 0b00000111;
+static OP_SIZE: usize = 5;
+static OP_MASK: i64 = 0b11111;
+static OP_NOOP: i8 = 0b00001;
+static OP_HALT: i8 = 0b00010;
+static OP_MOV:  i8 = 0b00011;
+static OP_ADD:  i8 = 0b00100;
+static OP_POP:  i8 = 0b00101;
+static OP_PUSH: i8 = 0b00110;
+static OP_INT:  i8 = 0b00111;
 
-static TYPE_SIZE: usize = 4;
-static TYPE_MASK: i8 = 0b0011;
-static TYPE_VAL: i8 = 0b0001;
-static TYPE_REG: i8 = 0b0010;
+static TYPE_SIZE: usize = 2;
+static TYPE_MASK: i8 = 0b11;
+static TYPE_VAL:  i8 = 0b01;
+static TYPE_REG:  i8 = 0b10;
 //static TYPE_ADDR: i8 = 0b11;
 
-static REG_SIZE: usize = 8;
-static REG_MASK: i64 = 0b11111111;
+static REG_SIZE: usize = 32;
+static REG_MASK: i64 = 0b11111111111111111111111111111111;
 static REG_EAX_ADDR: i64 = 0b0001;
 static REG_ECX_ADDR: i64 = 0b0010;
 static REG_EDX_ADDR: i64 = 0b0011;
@@ -32,8 +32,6 @@ fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
     Ok(io::BufReader::new(fh).lines())
 }
 
-// 4 bits: opcode
-// |0000|
 fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
     let mut inst: i64 = 0;
     for token in line.split_whitespace() {
@@ -47,16 +45,16 @@ fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
             let val_bitewise = TYPE_SIZE + OP_SIZE;
             if token == "eax" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EAX_ADDR) << val_bitewise;
+                inst = inst | REG_EAX_ADDR << val_bitewise;
             } else if token == "ecx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_ECX_ADDR) << val_bitewise;
+                inst = inst | REG_ECX_ADDR << val_bitewise;
             } else if token == "edx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EDX_ADDR) << val_bitewise;
+                inst = inst | REG_EDX_ADDR << val_bitewise;
             } else if token == "ebx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EBX_ADDR) << val_bitewise;
+                inst = inst | REG_EBX_ADDR << val_bitewise;
             } else {
                 match token.parse::<i32>() {
                     Ok(val) => { 
@@ -71,16 +69,16 @@ fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
             let val_bitewise = TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE;
             if token == "eax" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EAX_ADDR) << val_bitewise;
+                inst = inst | REG_EAX_ADDR << val_bitewise;
             } else if token == "ecx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_ECX_ADDR) << val_bitewise;
+                inst = inst | REG_ECX_ADDR << val_bitewise;
             } else if token == "edx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EDX_ADDR) << val_bitewise;
+                inst = inst | REG_EDX_ADDR << val_bitewise;
             } else if token == "ebx" {
                 inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | i64::from(REG_EBX_ADDR) << val_bitewise;
+                inst = inst | REG_EBX_ADDR << val_bitewise;
             } else {
                 match token.parse::<i32>() {
                     Ok(val) => { 

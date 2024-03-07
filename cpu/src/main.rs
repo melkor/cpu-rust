@@ -28,9 +28,9 @@ static REG_EDX_ADDR: i64 = 0b0011;
 static REG_EBX_ADDR: i64 = 0b0100;
 
 static REG_TYPE_BITE_OFFSET: usize = OP_SIZE;
-static REG_VALUE_BITE_OFFSET: usize = OP_SIZE;
-static VAL_TYPE_BITE_OFFSET: usize = OP_SIZE;
-static VAL_VALUE_BITE_OFFSET: usize = OP_SIZE;
+static REG_VALUE_BITE_OFFSET: usize = TYPE_SIZE + OP_SIZE;
+static VAL_TYPE_BITE_OFFSET: usize = REG_SIZE + TYPE_SIZE + OP_SIZE;
+static VAL_VALUE_BITE_OFFSET: usize = TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE;
 
 fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
     let fh = File::open(file_name)?;

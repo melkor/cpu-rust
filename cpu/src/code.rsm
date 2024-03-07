@@ -1,4 +1,4 @@
-; NOOP
+ NOOP
  MOV eax 1
  MOV ebx eax 
  MOV eax 1234 

@@ -13,6 +13,7 @@ static OP_ADD:  u8 = 0b00100;
 static OP_POP:  u8 = 0b00101;
 static OP_PUSH: u8 = 0b00110;
 static OP_INT:  u8 = 0b00111;
+static OP_CMP:  u8 = 0b01000;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
@@ -26,6 +27,10 @@ static REG_EAX_ADDR: u64 = 0b0001;
 static REG_ECX_ADDR: u64 = 0b0010;
 static REG_EDX_ADDR: u64 = 0b0011;
 static REG_EBX_ADDR: u64 = 0b0100;
+
+static REG_FLAG_ADDR: u64 = 0b1000;
+static CF_FLAG: u64 = 1;
+static ZF_FLAG: u64 = 6;
 
 static REG_TYPE_BITE_OFFSET: usize = OP_SIZE;
 static REG_VALUE_BITE_OFFSET: usize = TYPE_SIZE + OP_SIZE;
@@ -90,6 +95,7 @@ fn main() {
         ("PUSH", OP_PUSH),
         ("POP", OP_POP),
         ("INT", OP_INT),
+        ("CMP", OP_CMP),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -120,8 +126,8 @@ fn main() {
             }
         }
     }
-    let low_sp = ip + 1;
-    let mut sp = low_sp;
+    let low_sp = ip; // the lowest stack address possible
+    let mut sp = low_sp; // stck pointer
     ip = 0;
 
     println!("Dump inst in memories:");
@@ -129,6 +135,7 @@ fn main() {
         println!("{:#011b} => {:#066b}", i, memories[i]);
     }
 
+    println!("\n\nStart execution:");
     while ip < low_sp { 
         let reg_inst = memories[ip];
         println!("inst: {:#064b}", reg_inst);
@@ -181,6 +188,31 @@ fn main() {
                 let addr = registers[REG_ECX_ADDR as usize] as usize + low_sp;
                 println!("{}", memories[addr]);
             }
+        } else if op_code == OP_CMP {
+            let mut val1: u64 = 0;
+            if reg_type == TYPE_REG {
+                val1 = registers[reg_val as usize];
+            } else if reg_type == TYPE_VAL {
+                val1 = reg_val;
+            }
+
+            let mut val2: u64 = 0;
+            if val_type == TYPE_REG {
+                val2 = registers[val as usize];
+            } else if val_type == TYPE_VAL {
+                val2 = val;
+            }
+
+            if val1 - val2 == 0 {
+                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 1 << ZF_FLAG; 
+            } else if val1 > val2 {
+                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << ZF_FLAG; 
+                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << CF_FLAG; 
+            } else {
+                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << ZF_FLAG; 
+                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 1 << CF_FLAG; 
+            }
+
         }
         println!("next ......");
         ip += 1;
@@ -188,7 +220,7 @@ fn main() {
 
     println!("\n\nDump registers:");
     for (index, item) in registers.iter().enumerate() {
-        println!("{:#06b} => {:#034b}", index, item);
+        println!("{:#06b} => {:#066b}", index, item);
     }
 
     println!("\n\nDump stack:");

@@ -27,9 +27,38 @@ static REG_ECX_ADDR: i64 = 0b0010;
 static REG_EDX_ADDR: i64 = 0b0011;
 static REG_EBX_ADDR: i64 = 0b0100;
 
+static REG_TYPE_BITE_OFFSET: usize = OP_SIZE;
+static REG_VALUE_BITE_OFFSET: usize = OP_SIZE;
+static VAL_TYPE_BITE_OFFSET: usize = OP_SIZE;
+static VAL_VALUE_BITE_OFFSET: usize = OP_SIZE;
+
 fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
     let fh = File::open(file_name)?;
     Ok(io::BufReader::new(fh).lines())
+}
+
+fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst: &mut i64) {
+    if token == "eax" {
+        *inst = *inst | i64::from(TYPE_REG) << type_bite_offset;
+        *inst = *inst | REG_EAX_ADDR << val_bite_offset;
+    } else if token == "ecx" {
+        *inst = *inst | i64::from(TYPE_REG) << type_bite_offset;
+        *inst = *inst | REG_ECX_ADDR << val_bite_offset;
+    } else if token == "edx" {
+        *inst = *inst | i64::from(TYPE_REG) << type_bite_offset;
+        *inst = *inst | REG_EDX_ADDR << val_bite_offset;
+    } else if token == "ebx" {
+        *inst = *inst | i64::from(TYPE_REG) << type_bite_offset;
+        *inst = *inst | REG_EBX_ADDR << val_bite_offset;
+    } else {
+        match token.parse::<i32>() {
+            Ok(val) => { 
+                *inst = *inst | i64::from(TYPE_VAL) << type_bite_offset;
+                *inst = *inst | i64::from(val) << val_bite_offset;
+            },
+            Err(_) => println!("TODO todo"),
+        }
+    }
 }
 
 fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
@@ -44,53 +73,9 @@ fn decode(line: &str, op_list: &HashMap<&str, i8>) -> Result<i64, String> {
                 _ => return Err(format!("Unsupported OP: {}", token)),
             }
         } else if inst & (REG_MASK << OP_SIZE) == 0 {
-            let type_bitewise = OP_SIZE;
-            let val_bitewise = TYPE_SIZE + OP_SIZE;
-            if token == "eax" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EAX_ADDR << val_bitewise;
-            } else if token == "ecx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_ECX_ADDR << val_bitewise;
-            } else if token == "edx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EDX_ADDR << val_bitewise;
-            } else if token == "ebx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EBX_ADDR << val_bitewise;
-            } else {
-                match token.parse::<i32>() {
-                    Ok(val) => { 
-                        inst = inst | i64::from(TYPE_VAL) << type_bitewise;
-                        inst = inst | i64::from(val) << val_bitewise;
-                    },
-                    Err(_) => println!("TODO todo"),
-                }
-            }
+            load_inst(token, REG_TYPE_BITE_OFFSET, REG_VALUE_BITE_OFFSET, &mut inst) 
         } else {
-            let type_bitewise = REG_SIZE + TYPE_SIZE + OP_SIZE;
-            let val_bitewise = TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE;
-            if token == "eax" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EAX_ADDR << val_bitewise;
-            } else if token == "ecx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_ECX_ADDR << val_bitewise;
-            } else if token == "edx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EDX_ADDR << val_bitewise;
-            } else if token == "ebx" {
-                inst = inst | i64::from(TYPE_REG) << type_bitewise;
-                inst = inst | REG_EBX_ADDR << val_bitewise;
-            } else {
-                match token.parse::<i32>() {
-                    Ok(val) => { 
-                        inst = inst | i64::from(TYPE_VAL) << type_bitewise;
-                        inst = inst | i64::from(val) << val_bitewise;
-                    },
-                    Err(_) => println!("TODO todo"),
-                }
-            }
+            load_inst(token, VAL_TYPE_BITE_OFFSET, VAL_VALUE_BITE_OFFSET, &mut inst) 
         }
     }
     Ok(inst)

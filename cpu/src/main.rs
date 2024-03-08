@@ -1,30 +1,30 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, Seek, BufRead};
+use std::io::{self, BufRead, Seek};
 use std::process;
 
 static OP_SIZE: usize = 5;
 static OP_MASK: u64 = 0b11111;
 static OP_NOOP: u8 = 0b00001;
 static OP_HALT: u8 = 0b00010;
-static OP_MOV:  u8 = 0b00011;
-static OP_ADD:  u8 = 0b00100;
-static OP_POP:  u8 = 0b00101;
+static OP_MOV: u8 = 0b00011;
+static OP_ADD: u8 = 0b00100;
+static OP_POP: u8 = 0b00101;
 static OP_PUSH: u8 = 0b00110;
-static OP_INT:  u8 = 0b00111;
-static OP_CMP:  u8 = 0b01000;
-static OP_JMP:  u8 = 0b01001;
-static OP_JE:   u8 = 0b01010;
-static OP_JNE:  u8 = 0b01011;
-static OP_JL:   u8 = 0b01100;
-static OP_JLE:  u8 = 0b01101;
-static OP_JG:   u8 = 0b01110;
-static OP_JGE:  u8 = 0b01111;
+static OP_INT: u8 = 0b00111;
+static OP_CMP: u8 = 0b01000;
+static OP_JMP: u8 = 0b01001;
+static OP_JE: u8 = 0b01010;
+static OP_JNE: u8 = 0b01011;
+static OP_JL: u8 = 0b01100;
+static OP_JLE: u8 = 0b01101;
+static OP_JG: u8 = 0b01110;
+static OP_JGE: u8 = 0b01111;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
-static TYPE_VAL:  u8 = 0b01;
-static TYPE_REG:  u8 = 0b10;
+static TYPE_VAL: u8 = 0b01;
+static TYPE_REG: u8 = 0b10;
 static TYPE_ADDR: u8 = 0b11;
 
 static REG_SIZE: usize = 32;
@@ -43,7 +43,13 @@ static REG_VALUE_BITE_OFFSET: usize = TYPE_SIZE + OP_SIZE;
 static VAL_TYPE_BITE_OFFSET: usize = REG_SIZE + TYPE_SIZE + OP_SIZE;
 static VAL_VALUE_BITE_OFFSET: usize = TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE;
 
-fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst: &mut u64, tag_addr: &HashMap<String, u64>) {
+fn load_inst(
+    token: &str,
+    type_bite_offset: usize,
+    val_bite_offset: usize,
+    inst: &mut u64,
+    tag_addr: &HashMap<String, u64>,
+) {
     if token == "eax" {
         *inst = *inst | u64::from(TYPE_REG) << type_bite_offset;
         *inst = *inst | REG_EAX_ADDR << val_bite_offset;
@@ -58,22 +64,26 @@ fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst:
         *inst = *inst | REG_EBX_ADDR << val_bite_offset;
     } else {
         match token.parse::<u32>() {
-            Ok(val) => { 
+            Ok(val) => {
                 *inst = *inst | u64::from(TYPE_VAL) << type_bite_offset;
                 *inst = *inst | u64::from(val) << val_bite_offset;
-            },
+            }
             Err(_) => {
                 if tag_addr.contains_key(token) {
                     *inst = *inst | u64::from(TYPE_ADDR) << type_bite_offset;
-                    let addr = tag_addr.get(token).unwrap(); 
+                    let addr = tag_addr.get(token).unwrap();
                     *inst = *inst | u64::from(*addr) << val_bite_offset;
-                } 
-            },
+                }
+            }
         }
     }
 }
 
-fn decode(line: &str, op_list: &HashMap<&str, u8>, tag_addr: &HashMap<String, u64>) -> Result<u64, String> {
+fn decode(
+    line: &str,
+    op_list: &HashMap<&str, u8>,
+    tag_addr: &HashMap<String, u64>,
+) -> Result<u64, String> {
     let mut inst: u64 = 0;
     for token in line.split_whitespace() {
         if token.starts_with(";") {
@@ -88,9 +98,21 @@ fn decode(line: &str, op_list: &HashMap<&str, u8>, tag_addr: &HashMap<String, u6
                 _ => return Err(format!("Unsupported OP: {}", token)),
             }
         } else if inst & (REG_MASK << OP_SIZE) == 0 {
-            load_inst(token, REG_TYPE_BITE_OFFSET, REG_VALUE_BITE_OFFSET, &mut inst, tag_addr) 
+            load_inst(
+                token,
+                REG_TYPE_BITE_OFFSET,
+                REG_VALUE_BITE_OFFSET,
+                &mut inst,
+                tag_addr,
+            )
         } else {
-            load_inst(token, VAL_TYPE_BITE_OFFSET, VAL_VALUE_BITE_OFFSET, &mut inst, tag_addr) 
+            load_inst(
+                token,
+                VAL_TYPE_BITE_OFFSET,
+                VAL_VALUE_BITE_OFFSET,
+                &mut inst,
+                tag_addr,
+            )
         }
     }
     Ok(inst)
@@ -98,7 +120,7 @@ fn decode(line: &str, op_list: &HashMap<&str, u8>, tag_addr: &HashMap<String, u6
 
 fn main() {
     let op_list = HashMap::from([
-        ("NOOP", OP_NOOP), 
+        ("NOOP", OP_NOOP),
         ("HALT", OP_HALT),
         ("MOV", OP_MOV),
         ("ADD", OP_ADD),
@@ -174,7 +196,7 @@ fn main() {
             }
         }
     }
-    drop(fh); 
+    drop(fh);
 
     let low_sp = ip; // the lowest stack address possible
     let mut sp = low_sp; // stack pointer
@@ -191,7 +213,7 @@ fn main() {
     }
 
     println!("\n\nStart execution:");
-    while ip < low_sp { 
+    while ip < low_sp {
         let reg_inst = memories[ip];
         println!("inst: {:#064b}", reg_inst);
 
@@ -212,7 +234,10 @@ fn main() {
                 println!("mov value '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
                 registers[reg_addr] = val;
             } else if val_type == TYPE_REG {
-                println!("mov from reg at addr '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
+                println!(
+                    "mov from reg at addr '{:#b}' into reg at addr '{:#b}'",
+                    val, reg_addr
+                );
                 registers[reg_addr] = registers[val as usize];
             }
         } else if op_code == OP_ADD {
@@ -221,16 +246,22 @@ fn main() {
                 println!("add value '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
                 registers[reg_addr] += val;
             } else if val_type == TYPE_REG {
-                println!("add from reg at addr '{:#b}' into reg at addr '{:#b}'", val, reg_addr);
+                println!(
+                    "add from reg at addr '{:#b}' into reg at addr '{:#b}'",
+                    val, reg_addr
+                );
                 registers[reg_addr] += registers[val as usize];
             }
         } else if op_code == OP_PUSH {
             if reg_type == TYPE_VAL {
                 println!("push value '{:#b}' into stack at add'{:#b}'", reg_val, sp);
-                memories[sp] = reg_val; 
+                memories[sp] = reg_val;
             } else if reg_type == TYPE_REG {
-                println!("push register '{:#b}' into stack at add'{:#b}'", reg_val, sp);
-                memories[sp] = registers[reg_val as usize]; 
+                println!(
+                    "push register '{:#b}' into stack at add'{:#b}'",
+                    reg_val, sp
+                );
+                memories[sp] = registers[reg_val as usize];
             }
             sp += 1;
         } else if op_code == OP_POP {
@@ -260,61 +291,61 @@ fn main() {
 
             if val1 - val2 == 0 {
                 println!("CMP val1 == val2");
-                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << ZF_FLAG; 
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << ZF_FLAG;
             } else if val1 > val2 {
                 println!("CMP val1 > val2");
-                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG; 
-                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << CF_FLAG; 
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG;
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << CF_FLAG;
             } else {
                 println!("CMP val1 < val2");
-                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG; 
-                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << CF_FLAG; 
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG;
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << CF_FLAG;
             }
         } else if op_code == OP_JMP {
             ip = reg_val as usize;
             continue;
         } else if op_code == OP_JE {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 {
                 ip = reg_val as usize;
                 println!("jump equal to {:#b}", ip);
                 continue;
             }
         } else if op_code == OP_JNE {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 {
                 ip = reg_val as usize;
                 println!("jump not equal to {:#b}", ip);
                 continue;
             }
         } else if op_code == OP_JL {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
-               registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0 
-            { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0
+                && registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0
+            {
                 ip = reg_val as usize;
                 println!("jump lower to {:#b}", ip);
                 continue;
             }
         } else if op_code == OP_JLE {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 ||
-               ( registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
-                 registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0 )
-            { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0
+                || (registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0
+                    && registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0)
+            {
                 ip = reg_val as usize;
                 println!("jump lower or equal to {:#b}", ip);
                 continue;
             }
         } else if op_code == OP_JG {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
-               registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0 
-            { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0
+                && registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0
+            {
                 ip = reg_val as usize;
                 println!("jump greater to {:#b}", ip);
                 continue;
             }
         } else if op_code == OP_JGE {
-            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 ||
-               ( registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
-                 registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0 )
-            { 
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0
+                || (registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0
+                    && registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0)
+            {
                 ip = reg_val as usize;
                 println!("jump greater or equal to {:#b}", ip);
                 continue;

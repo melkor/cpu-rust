@@ -16,8 +16,10 @@ static OP_CMP:  u8 = 0b01000;
 static OP_JMP:  u8 = 0b01001;
 static OP_JE:   u8 = 0b01010;
 static OP_JNE:  u8 = 0b01011;
-static OP_JL:  u8 = 0b01100;
-static OP_JLE: u8 = 0b01101;
+static OP_JL:   u8 = 0b01100;
+static OP_JLE:  u8 = 0b01101;
+static OP_JG:   u8 = 0b01110;
+static OP_JGE:  u8 = 0b01111;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
@@ -109,6 +111,8 @@ fn main() {
         ("JNE", OP_JNE),
         ("JL", OP_JL),
         ("JLE", OP_JLE),
+        ("JG", OP_JG),
+        ("JGE", OP_JGE),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -136,6 +140,9 @@ fn main() {
             continue;
         }
         for token in line.split_whitespace() {
+            if token.trim().is_empty() {
+                continue;
+            }
             if token.contains(":") {
                 let mut words = token.split(":");
                 let tag = words.next().unwrap();
@@ -293,6 +300,23 @@ fn main() {
             { 
                 ip = reg_val as usize;
                 println!("jump lower or equal to {:#b}", ip);
+                continue;
+            }
+        } else if op_code == OP_JG {
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
+               registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0 
+            { 
+                ip = reg_val as usize;
+                println!("jump greater to {:#b}", ip);
+                continue;
+            }
+        } else if op_code == OP_JGE {
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 ||
+               ( registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
+                 registers[REG_FLAG_ADDR] & (1 << CF_FLAG) == 0 )
+            { 
+                ip = reg_val as usize;
+                println!("jump greater or equal to {:#b}", ip);
                 continue;
             }
         }

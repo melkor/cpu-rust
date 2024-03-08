@@ -1,10 +1,10 @@
 ; NOOP
 ; MOV eax 1
-; MOV ebx eax 
-; MOV eax 1234 
-; ADD eax 1 
-; ADD edx eax 
-; ADD edx ebx 
+; MOV ebx eax
+; MOV eax 1234
+; ADD eax 1
+; ADD edx eax
+; ADD edx ebx
 ; PUSH edx
 ; PUSH 21
 ; PUSH eax
@@ -22,48 +22,72 @@
 ;MOV edx 1
 ;MOV eax 4
 ;INT
-;
+
 ; test JMP
-; MOV ebx 1
-; MOV ecx 1
-; JMP coucou
-; MOV ecx 2
-; coucou: CMP ebx ecx
-;
+;  MOV ebx 1
+;  MOV ecx 1
+;  JMP coucou
+;  MOV ecx 2
+;  coucou: CMP ebx ecx
+
 ; test JE
-; MOV ebx 1
-; MOV ecx 1
-; CMP ebx ecx
-; JE fin
-; MOV ecx 2
-; fin: MOV eax 2
-;
+;   MOV ebx 1
+;   MOV ecx 1
+;   CMP ebx ecx
+;   JE fin
+;   MOV ecx 2
+;   fin: MOV eax 2
+
 ; test JNE
-; MOV ebx 1
-; MOV ecx 2
-; CMP ebx ecx
-; JNE fin
-; MOV ecx 3
-; fin: MOV eax 2
-;
+;   MOV ebx 1
+;   MOV ecx 2
+;   CMP ebx ecx
+;   JNE fin
+;   MOV ecx 3
+;   fin: MOV eax 2
+
 ; test JL
-; MOV ebx 1
-; MOV ecx 2
-; CMP ebx ecx
-; JL fin
-; MOV ecx 3
-; fin: MOV eax 2
+;   MOV ebx 1
+;   MOV ecx 2
+;   CMP ebx ecx
+;   JL fin
+;   MOV ecx 3
+;   fin: MOV eax 2
 
 ; test JLE
-MOV ebx 1
-MOV ecx 1
-CMP ebx ecx
-JLE fin1
-MOV ecx 3
-fin1: MOV eax 2
-MOV ebx 1
-MOV ecx 2
-CMP ebx ecx
-JLE fin2
-MOV ecx 3
-fin2: ADD eax 3
+;   MOV ebx 1
+;   MOV ecx 1
+;   CMP ebx ecx
+;   JLE fin1
+;   MOV ecx 3
+;   fin1: MOV eax 2
+;
+;   MOV ebx 1
+;   MOV ecx 2
+;   CMP ebx ecx
+;   JLE fin2
+;   MOV ecx 3
+;   fin2: ADD eax 3
+
+; test JG
+;  MOV ebx 3
+;  MOV ecx 2
+;  CMP ebx ecx
+;  JG fin
+;  MOV ecx 3
+;  fin: MOV eax 2
+
+; test JLE
+   MOV ebx 1
+   MOV ecx 1
+   CMP ebx ecx
+   JGE fin1
+   MOV ecx 3
+   fin1: MOV eax 2
+
+   MOV ebx 3
+   MOV ecx 2
+   CMP ebx ecx
+   JGE fin2
+   MOV ecx 3
+   fin2: ADD eax 3

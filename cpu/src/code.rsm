@@ -14,20 +14,34 @@
 ; MOV edx 1
 ; MOV eax 4
 ; INT
+;
+; test dispay
 ;PUSH 1234
 ;MOV ebx 1
 ;MOV ecx 0
 ;MOV edx 1
 ;MOV eax 4
 ;INT
+;
+; test JMP
 ; MOV ebx 1
 ; MOV ecx 1
 ; JMP coucou
 ; MOV ecx 2
 ; coucou: CMP ebx ecx
+;
+; test JE
+; MOV ebx 1
+; MOV ecx 1
+; CMP ebx ecx
+; JE fin
+; MOV ecx 2
+; fin: MOV eax 2
+;
+; test JNE
 MOV ebx 1
-MOV ecx 1
-CMP ebx ecx
-JE fin
 MOV ecx 2
+CMP ebx ecx
+JNE fin
+MOV ecx 3
 fin: MOV eax 2

@@ -20,8 +20,14 @@
 ;MOV edx 1
 ;MOV eax 4
 ;INT
+; MOV ebx 1
+; MOV ecx 1
+; JMP coucou
+; MOV ecx 2
+; coucou: CMP ebx ecx
 MOV ebx 1
 MOV ecx 1
-JMP coucou
+CMP ebx ecx
+JE fin
 MOV ecx 2
-coucou: CMP ebx ecx
+fin: MOV eax 2

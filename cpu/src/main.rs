@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::{self, Seek, BufRead};
 use std::process;
 
-
 static OP_SIZE: usize = 5;
 static OP_MASK: u64 = 0b11111;
 static OP_NOOP: u8 = 0b00001;
@@ -15,6 +14,7 @@ static OP_PUSH: u8 = 0b00110;
 static OP_INT:  u8 = 0b00111;
 static OP_CMP:  u8 = 0b01000;
 static OP_JMP:  u8 = 0b01001;
+static OP_JE:   u8 = 0b01010;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
@@ -29,7 +29,7 @@ static REG_ECX_ADDR: u64 = 0b0010;
 static REG_EDX_ADDR: u64 = 0b0011;
 static REG_EBX_ADDR: u64 = 0b0100;
 
-static REG_FLAG_ADDR: u64 = 0b1000;
+static REG_FLAG_ADDR: usize = 0b1000;
 static CF_FLAG: u64 = 1;
 static ZF_FLAG: u64 = 6;
 
@@ -102,6 +102,7 @@ fn main() {
         ("INT", OP_INT),
         ("CMP", OP_CMP),
         ("JMP", OP_JMP),
+        ("JE", OP_JE),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -237,17 +238,26 @@ fn main() {
             }
 
             if val1 - val2 == 0 {
-                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 1 << ZF_FLAG; 
+                println!("CMP val1 == val2");
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << ZF_FLAG; 
             } else if val1 > val2 {
-                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << ZF_FLAG; 
-                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << CF_FLAG; 
+                println!("CMP val1 > val2");
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG; 
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << CF_FLAG; 
             } else {
-                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << ZF_FLAG; 
-                registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 1 << CF_FLAG; 
+                println!("CMP val1 < val2");
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 0 << ZF_FLAG; 
+                registers[REG_FLAG_ADDR] = registers[REG_FLAG_ADDR] | 1 << CF_FLAG; 
             }
         } else if op_code == OP_JMP {
             ip = reg_val as usize;
             continue;
+        } else if op_code == OP_JE {
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 { 
+                ip = reg_val as usize;
+                println!("jump equal to {:#b}", ip);
+                continue;
+            }
         }
         println!("next ......");
         ip += 1;

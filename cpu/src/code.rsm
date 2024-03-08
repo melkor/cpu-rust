@@ -22,4 +22,6 @@
 ;INT
 MOV ebx 1
 MOV ecx 1
-CMP ebx ecx
+JMP coucou
+MOV ecx 2
+coucou: CMP ebx ecx

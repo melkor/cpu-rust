@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self, Seek, BufRead};
 use std::process;
 
 
@@ -14,12 +14,13 @@ static OP_POP:  u8 = 0b00101;
 static OP_PUSH: u8 = 0b00110;
 static OP_INT:  u8 = 0b00111;
 static OP_CMP:  u8 = 0b01000;
+static OP_JMP:  u8 = 0b01001;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
 static TYPE_VAL:  u8 = 0b01;
 static TYPE_REG:  u8 = 0b10;
-//static TYPE_ADDR: i8 = 0b11;
+static TYPE_ADDR: u8 = 0b11;
 
 static REG_SIZE: usize = 32;
 static REG_MASK: u64 = 0b11111111111111111111111111111111;
@@ -37,12 +38,7 @@ static REG_VALUE_BITE_OFFSET: usize = TYPE_SIZE + OP_SIZE;
 static VAL_TYPE_BITE_OFFSET: usize = REG_SIZE + TYPE_SIZE + OP_SIZE;
 static VAL_VALUE_BITE_OFFSET: usize = TYPE_SIZE + REG_SIZE + TYPE_SIZE + OP_SIZE;
 
-fn load_code(file_name: &str) -> io::Result<io::Lines<io::BufReader<File>>> {
-    let fh = File::open(file_name)?;
-    Ok(io::BufReader::new(fh).lines())
-}
-
-fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst: &mut u64) {
+fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst: &mut u64, tag_addr: &HashMap<String, u64>) {
     if token == "eax" {
         *inst = *inst | u64::from(TYPE_REG) << type_bite_offset;
         *inst = *inst | REG_EAX_ADDR << val_bite_offset;
@@ -61,16 +57,25 @@ fn load_inst(token: &str, type_bite_offset: usize, val_bite_offset: usize, inst:
                 *inst = *inst | u64::from(TYPE_VAL) << type_bite_offset;
                 *inst = *inst | u64::from(val) << val_bite_offset;
             },
-            Err(_) => println!("TODO todo"),
+            Err(_) => {
+                if tag_addr.contains_key(token) {
+                    *inst = *inst | u64::from(TYPE_ADDR) << type_bite_offset;
+                    let addr = tag_addr.get(token).unwrap(); 
+                    *inst = *inst | u64::from(*addr) << val_bite_offset;
+                } 
+            },
         }
     }
 }
 
-fn decode(line: &str, op_list: &HashMap<&str, u8>) -> Result<u64, String> {
+fn decode(line: &str, op_list: &HashMap<&str, u8>, tag_addr: &HashMap<String, u64>) -> Result<u64, String> {
     let mut inst: u64 = 0;
     for token in line.split_whitespace() {
         if token.starts_with(";") {
             break;
+        }
+        if token.contains(":") {
+            continue;
         }
         if inst & OP_MASK == 0 {
             match op_list.get(token) {
@@ -78,9 +83,9 @@ fn decode(line: &str, op_list: &HashMap<&str, u8>) -> Result<u64, String> {
                 _ => return Err(format!("Unsupported OP: {}", token)),
             }
         } else if inst & (REG_MASK << OP_SIZE) == 0 {
-            load_inst(token, REG_TYPE_BITE_OFFSET, REG_VALUE_BITE_OFFSET, &mut inst) 
+            load_inst(token, REG_TYPE_BITE_OFFSET, REG_VALUE_BITE_OFFSET, &mut inst, tag_addr) 
         } else {
-            load_inst(token, VAL_TYPE_BITE_OFFSET, VAL_VALUE_BITE_OFFSET, &mut inst) 
+            load_inst(token, VAL_TYPE_BITE_OFFSET, VAL_VALUE_BITE_OFFSET, &mut inst, tag_addr) 
         }
     }
     Ok(inst)
@@ -96,6 +101,7 @@ fn main() {
         ("POP", OP_POP),
         ("INT", OP_INT),
         ("CMP", OP_CMP),
+        ("JMP", OP_JMP),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -104,33 +110,60 @@ fn main() {
     let mut memories: [u64; 128] = [0; 128];
     let mut ip = 0; // instruction pointer
 
-    let code_reader = match load_code("code.rsm") {
-        Ok(content) => content,
+    let mut fh = match File::open("code.rsm") {
+        Ok(f) => f,
         Err(err) => {
-            eprintln!("Problem parsing code: {err}");
+            eprintln!("Cannot parse code: {err}");
             process::exit(2);
         }
     };
+    let mut code_reader = io::BufReader::new(&fh);
 
-    for line in code_reader.flatten() {
-        match decode(&line, &op_list) {
-            Err(err) => {
-                eprintln!("decoding er!ror: {}", err);
-                process::exit(1);
+    let mut tag_addr = HashMap::new();
+    for l in code_reader.lines() {
+        let line = l.unwrap();
+        if line.starts_with(";") {
+            continue;
+        }
+        for token in line.split_whitespace() {
+            if token.contains(":") {
+                let mut words = token.split(":");
+                let tag = words.next().unwrap();
+                tag_addr.insert(String::from(tag), ip as u64);
             }
+        }
+        ip = ip + 1;
+    }
+
+    if let Err(err) = fh.rewind() {
+        eprintln!("Problem rewind file: {err}");
+        process::exit(2);
+    }
+
+    ip = 0;
+    code_reader = io::BufReader::new(&fh);
+    for line in code_reader.lines() {
+        let line = line.unwrap();
+        match decode(&line, &op_list, &tag_addr) {
             Ok(inst) => {
                 if inst & 0xFFFFFFFFFFFFFFFF != 0 {
                     memories[ip] = inst;
                     ip += 1;
                 }
             }
+            Err(err) => {
+                eprintln!("decoding error: {}", err);
+                process::exit(1);
+            }
         }
     }
+    drop(fh); 
+
     let low_sp = ip; // the lowest stack address possible
-    let mut sp = low_sp; // stck pointer
+    let mut sp = low_sp; // stack pointer
     ip = 0;
 
-    println!("Dump inst in memories:");
+    println!("\n\nDump inst in memories:");
     for i in 0..low_sp {
         println!("{:#011b} => {:#066b}", i, memories[i]);
     }
@@ -189,18 +222,18 @@ fn main() {
                 println!("{}", memories[addr]);
             }
         } else if op_code == OP_CMP {
-            let mut val1: u64 = 0;
+            let mut val1: i64 = 0;
             if reg_type == TYPE_REG {
-                val1 = registers[reg_val as usize];
+                val1 = registers[reg_val as usize] as i64;
             } else if reg_type == TYPE_VAL {
-                val1 = reg_val;
+                val1 = reg_val as i64;
             }
 
-            let mut val2: u64 = 0;
+            let mut val2: i64 = 0;
             if val_type == TYPE_REG {
-                val2 = registers[val as usize];
+                val2 = registers[val as usize] as i64;
             } else if val_type == TYPE_VAL {
-                val2 = val;
+                val2 = val as i64;
             }
 
             if val1 - val2 == 0 {
@@ -212,7 +245,9 @@ fn main() {
                 registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 0 << ZF_FLAG; 
                 registers[REG_FLAG_ADDR as usize] = registers[REG_FLAG_ADDR as usize] | 1 << CF_FLAG; 
             }
-
+        } else if op_code == OP_JMP {
+            ip = reg_val as usize;
+            continue;
         }
         println!("next ......");
         ip += 1;

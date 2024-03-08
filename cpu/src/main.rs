@@ -16,6 +16,7 @@ static OP_CMP:  u8 = 0b01000;
 static OP_JMP:  u8 = 0b01001;
 static OP_JE:   u8 = 0b01010;
 static OP_JNE:  u8 = 0b01011;
+static OP_JL:  u8 = 0b01100;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
@@ -105,6 +106,7 @@ fn main() {
         ("JMP", OP_JMP),
         ("JE", OP_JE),
         ("JNE", OP_JNE),
+        ("JL", OP_JL),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -264,6 +266,14 @@ fn main() {
             if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 { 
                 ip = reg_val as usize;
                 println!("jump not equal to {:#b}", ip);
+                continue;
+            }
+        } else if op_code == OP_JL {
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
+               registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0 
+            { 
+                ip = reg_val as usize;
+                println!("jump lower to {:#b}", ip);
                 continue;
             }
         }

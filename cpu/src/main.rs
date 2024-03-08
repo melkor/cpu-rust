@@ -17,6 +17,7 @@ static OP_JMP:  u8 = 0b01001;
 static OP_JE:   u8 = 0b01010;
 static OP_JNE:  u8 = 0b01011;
 static OP_JL:  u8 = 0b01100;
+static OP_JLE: u8 = 0b01101;
 
 static TYPE_SIZE: usize = 2;
 static TYPE_MASK: u8 = 0b11;
@@ -107,6 +108,7 @@ fn main() {
         ("JE", OP_JE),
         ("JNE", OP_JNE),
         ("JL", OP_JL),
+        ("JLE", OP_JLE),
     ]);
 
     let mut registers: [u64; 16] = [0; 16];
@@ -127,6 +129,9 @@ fn main() {
     let mut tag_addr = HashMap::new();
     for l in code_reader.lines() {
         let line = l.unwrap();
+        if line.is_empty() {
+            continue;
+        }
         if line.starts_with(";") {
             continue;
         }
@@ -167,6 +172,11 @@ fn main() {
     let low_sp = ip; // the lowest stack address possible
     let mut sp = low_sp; // stack pointer
     ip = 0;
+
+    println!("\n\nDump tag:");
+    for (tag, addr) in tag_addr.clone() {
+        println!("{} => {:#010b}", tag, addr);
+    }
 
     println!("\n\nDump inst in memories:");
     for i in 0..low_sp {
@@ -274,6 +284,15 @@ fn main() {
             { 
                 ip = reg_val as usize;
                 println!("jump lower to {:#b}", ip);
+                continue;
+            }
+        } else if op_code == OP_JLE {
+            if registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) != 0 ||
+               ( registers[REG_FLAG_ADDR] & (1 << ZF_FLAG) == 0 &&
+                 registers[REG_FLAG_ADDR] & (1 << CF_FLAG) != 0 )
+            { 
+                ip = reg_val as usize;
+                println!("jump lower or equal to {:#b}", ip);
                 continue;
             }
         }

@@ -47,9 +47,23 @@
 ; fin: MOV eax 2
 ;
 ; test JL
+; MOV ebx 1
+; MOV ecx 2
+; CMP ebx ecx
+; JL fin
+; MOV ecx 3
+; fin: MOV eax 2
+
+; test JLE
+MOV ebx 1
+MOV ecx 1
+CMP ebx ecx
+JLE fin1
+MOV ecx 3
+fin1: MOV eax 2
 MOV ebx 1
 MOV ecx 2
 CMP ebx ecx
-JL fin
+JLE fin2
 MOV ecx 3
-fin: MOV eax 2
+fin2: ADD eax 3
